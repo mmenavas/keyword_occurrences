@@ -1,0 +1,346 @@
+<?php
+/**
+ * @file
+ * Creates a page that allows you to crawl a site and get keyword occurences on 
+ * all pages linked to the provided URL.
+ */
+
+/**
+ * Implements hook_help().
+ */
+function keyword_occurrences_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#keyword_occurrences':
+      $output = '';
+
+      $output .= '<p>' . t('This module provides an !keyword_occurrences to
+      perform keyword analysis for websites by accepting two parameters, URL
+      and keywords. Once the user input is entered, a table is rendered with
+      a list of pages (relative paths to the supplied url) and the number of
+      occurrences of the supplied keywords.',
+      array('!keyword_occurrences' => l(t('interface'), 'keyword-occurrences')))
+      . '</p>';
+
+      $output .= '<p>' . t('The !library_link library is required for this
+        module.',
+        array('!library_link' => l(t('Simple HTML DOM'),
+         'http://simplehtmldom.sourceforge.net/'))) . '</p>';
+
+      return $output;
+  }
+}
+
+/**
+ * Implement function hook_permission
+ */
+function keyword_occurrences_permission() {
+  return array(
+    'access keyword occurrences' => array(
+      'title' => t('Access Keyword Occurrences'),
+      'description' => t('Allow access to the keyword analysis tool.')
+    )
+  );
+}
+
+/**
+ * Implement function hook_menu
+ */
+function keyword_occurrences_menu() {
+  $items['keyword-occurrences'] = array(
+    'title' => 'Keyword Occurrences',
+    'description' => 'Interface for Keywords Analysis',
+    'page callback' => 'keyword_occurrences_ui',
+    'access arguments' => array('access keyword occurrences'),
+  );
+  return $items;
+}
+
+/**
+ * Implement hook_libraries_info().
+ * @note : Libraries 2.x
+ */
+function keyword_occurrences_libraries_info() {
+  $libraries['simplehtmldom'] = array(
+    'name' => 'Simple HTML DOM', 
+    'vendor url' => 'http://simplehtmldom.sourceforge.net', 
+    'download url' => 'http://sourceforge.net/projects/simplehtmldom/files/', 
+    'version arguments' => array(
+      'file' => 'simple_html_dom.php',
+      'pattern' => '@version\s+([0-9a-zA-Z\.-]+)@', 
+      'lines' => 50 
+    ),
+    'files' => array(
+      'php' => array('simple_html_dom.php'),
+    ),
+  );
+  return $libraries;
+}
+
+/**
+ * Render keyword analysis table
+ */
+function keyword_occurrences_ui() {
+
+  $library_name = "simplehtmldom";
+
+  // Load library or abort on failure.
+  if (!($library = @libraries_load($library_name)) ||
+  empty($library['loaded'])) {
+
+    drupal_set_message(t('@library_name library is missing.',
+    array('@library_name' => $library_name)), 'error');
+
+    return array(
+      'download' => array(
+        '#type' => 'markup',
+        '#markup' => "<p>" . t('You may download the @library_name library
+        from ', array('@library_name' => $library_name)) .
+        "<a href='{$library['download url']}' target='_blank'
+        title='Download library from this site.'>
+        {$library['download url']}</a></p>"
+      )
+    );
+  }
+
+  // Get url from filter
+  $url = (isset($_GET['url']) ? $_GET['url'] : '');
+  
+  // Get keywords from filter
+  $keywords = (isset($_GET['keywords']) ? $_GET['keywords'] : '');
+
+  // Get scope from filter
+  $scope = (isset($_GET['scope']) ? $_GET['scope'] : '');
+
+  // Abort if $url or $keywords are missing
+  if (!$url || !$keywords) {
+    // No url is entered.
+    // Render filters form
+    $filters = drupal_get_form('keyword_occurrences_filters_form');
+    return array(
+      'filters' => $filters,
+      'default' => array(
+        '#type' => 'markup',
+        '#markup' => '<p>' . t('Use the above form to provide an absolute url
+        and keywords.')
+        . '</p>'
+      )
+    );
+  }
+  
+  // Declare table components
+  $header = array(t('Pages'), t('Occurrences of "@keywords"', array('@keywords'
+  => $keywords)));
+
+  $rows = array();
+  
+  // Get all unique relative paths from specified url 
+  $pages = keyword_occurrences_get_pages($url);
+
+  // Iterate through every page and get number of keyword occurrences
+  foreach($pages as $page_url=>$path) {
+    $html = keyword_occurrences_crawl($page_url, $scope);
+    $row = array();
+    $row[] = $path;
+    $row[] = substr_count(strtolower($html), strtolower($keywords));
+    $rows[] = $row;
+  }
+
+  // Render filters form
+  $filters = drupal_get_form('keyword_occurrences_filters_form', $url,
+  $keywords, $scope);
+
+  return array(
+    'filters' => $filters,
+    'results' => array(
+      '#theme' => 'table',
+      '#header' => $header,
+      '#rows' => $rows,
+      '#empty' => t('No results were found.'),
+    )
+  );
+
+}
+
+/**
+ * Get html source code from supplied URL
+ */
+function keyword_occurrences_crawl($url, $scope) {
+  // Initialize source code
+  $src_code = '';
+
+  // Create DOM object
+  $html = new simple_html_dom();
+  @$html->load_file($url);
+
+  // If DOM object exists collect pages
+  if ($html->size) {
+    if ($scope) {
+      $elements = $html->find('body');
+      $src_code = (!empty($elements) ? $elements[0] : '');
+    }
+    else {
+      $src_code = $html;
+    }
+  }
+
+  return $src_code;
+}
+
+/**
+ * Get list of pages from $url
+ *
+ * TODO: Turn this into a recursive function to collect every unique relative
+ * path found in all pages.
+ *
+ */
+function keyword_occurrences_get_pages($url) {
+  // Initialize list of pages
+  $pages = array();
+  
+  // Remove trailing slash
+  $url = rtrim($url, '/');
+  
+  // Parse URL
+  $url_parts = parse_url($url);
+
+  $host = '';
+  // Remove www from host name if applicable
+  if (isset($url_parts['host']))
+    $host = str_replace('www.', '', $url_parts['host']);
+  
+  // List of allowed protocols
+  $allowed_protocols = array('http', 'https');
+  
+  // Create DOM object
+  $html = new simple_html_dom();
+  @$html->load_file($url);
+
+  // If DOM object exists, collect relative paths from <a> tags.
+  // Otherwise, show warning and abort.
+  if (!$html->size) {
+    drupal_set_message(t('Website could not be found with the supplied url.'),
+    'warning');
+    return $pages;
+  }
+
+  // Add initial page. This will not always be the root directory (/)
+  $pages[$url] = (isset($url_parts['path']) ? $url_parts['path'] : '/');
+  
+  // Add relative paths.
+  // TODO: Handle/support for in-page anchors (fragments) is missing.
+  foreach ($html->find('a') as $link) {
+
+    // Parse URL
+    $link_parts = parse_url($link->href);
+
+    // Get host name
+    $link_host = (isset($link_parts['host']) ? $link_parts['host'] : '');
+
+    // Remove www from host name if applicable
+    $link_host = str_replace('www.', '', $link_host);
+    
+    // Handle relative links
+    // 
+    if (!$link_host &&
+    !isset($link_parts['scheme']) &&
+    isset($link_parts['path']) &&
+    $link_parts['path'] != '/') {
+
+      // Avoid repeating root page (/)
+      if (($link_parts['path'] == '' || $link_parts['path'] == '/') &&
+      $pages[$url] != '/' ) {
+
+	$relative_link = '/';
+
+      }
+      else {
+	// Prepare the relative link by removing leading slash and 
+	// appending query if provided
+	$relative_link = ltrim($link_parts['path'], '/') .
+	(isset($link_parts['query']) ? '?' . $link_parts['query'] : '');
+      }
+      $pages[$url .  '/' . $relative_link] = $relative_link;
+    }
+    // Handle absolute links
+    elseif (isset($link_parts['scheme']) &&
+    in_array($link_parts['scheme'], $allowed_protocols) &&
+    $link_host == $host &&
+    isset($link_parts['path']) &&
+    $link_parts['path'] != '/') {
+
+      // Prepare the relative link by removing leading slash and 
+      // appending query if provided
+      $relative_link = $link_parts['path'] . (isset($link_parts['query']) ?
+      '?' . $link_parts['query'] : '');
+      $pages[$link->href] = $relative_link;
+
+    }
+  }
+  
+  return $pages;
+}
+
+/**
+ * Filters
+ */
+function keyword_occurrences_filters_form($form, &$form_state,
+$url = '', $keywords = '', $scope = 0) {
+
+  // Declare form
+  $form = array();
+
+  $form['url'] = array(
+    '#title' => t('URL'),
+    '#type' => 'textfield',
+    '#required' => true,
+    '#description' => t('Do not crawl large sites because PHP might run out of
+     memory. Avoid crawling sites that you do not own or manage.'),
+    '#default_value' => $url
+  );
+  $form['keywords'] = array(
+    '#title' => t('Keywords'),
+    '#type' => 'textfield',
+    '#required' => true,
+    '#default_value' => $keywords
+  );
+  $form['scope'] = array(
+    '#title' => t('Search in body tag only?'),
+    '#type' => 'checkbox',
+    '#default_value' => $scope
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Run analysis')
+  );
+
+  return $form;
+}
+
+/**
+ * Vaidate handler
+ */
+function keyword_occurrences_filters_form_validate($form, &$form_state) {
+  // Show error message
+  if (isset($form_state['values']['url']) &&
+  !valid_url($form_state['values']['url'], true)) {
+    form_set_error('url', t('Please enter a valid absolute URL.'));
+  }
+}
+
+/**
+ * Submit handler
+ */
+function keyword_occurrences_filters_form_submit($form, &$form_state) {
+  // Redirect to proper page
+  $form_state['redirect'] = array(
+    'keyword-occurrences',
+    array(
+      'query' => array(
+        'url' => $form_state['values']['url'],
+        'keywords' => $form_state['values']['keywords'],
+        'scope' => $form_state['values']['scope'],
+      )
+    )
+  );
+}
+
