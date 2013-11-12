@@ -9,7 +9,7 @@ drupal.org.
  memory.
 
 Description:
-Provides an interface to perform keyword analysis for websites by accepting two 
+Provides an interface to perform keyword search on a website by accepting two 
 parameters (URL and keywords). Once the user input is entered, a table is
 rendered with a list of pages (relative paths) and the number of occurrences
 of the keywords supplied.
