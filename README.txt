@@ -2,8 +2,7 @@ Keyword Occurrences
 =====================
 
 Important Notes:
-- This module is only a proof of concept. It is and will not be released in 
-drupal.org.
+- This module is only a proof of concept.
 - Do not use this module to crawl sites that you don't own or manage.
 - Do not crawl large sites (i.e. yahoo.com) as PHP will potentially run out of
  memory.
