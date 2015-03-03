@@ -3,4 +3,5 @@ description = "Allows you to crawl a site and get the number of occurrences
 of a keyword or keywords on the html source code."
 package = Goteq
 core = 7.x
-version = 7.x-0.1
+version = 7.x-0.2
+dependencies[] = libraries

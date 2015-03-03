@@ -1,0 +1,3 @@
+0.2
+---
+- Adding libraries dependency to info file.
