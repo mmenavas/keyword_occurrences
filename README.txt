@@ -20,7 +20,7 @@ Installation
 - Install the Simple HTML DOM library available at
 http://simplehtmldom.sourceforge.net/
 on /sites/all/libraries. Make sure the path to the library file
-simple_html_dom.php is /sites/all/simplehtmldom/simple_html_dom.php. This module
+simple_html_dom.php is /sites/all/libraries/simplehtmldom/simple_html_dom.php. This module
 has been tested with Simple HTML DOM v 1.5.
 
 How to use:
