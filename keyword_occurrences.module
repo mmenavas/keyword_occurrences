@@ -250,14 +250,14 @@ function keyword_occurrences_get_pages($url) {
       if (($link_parts['path'] == '' || $link_parts['path'] == '/') &&
       $pages[$url] != '/' ) {
 
-	$relative_link = '/';
+  $relative_link = '/';
 
       }
       else {
-	// Prepare the relative link by removing leading slash and 
-	// appending query if provided
-	$relative_link = ltrim($link_parts['path'], '/') .
-	(isset($link_parts['query']) ? '?' . $link_parts['query'] : '');
+  // Prepare the relative link by removing leading slash and
+  // appending query if provided
+  $relative_link = ltrim($link_parts['path'], '/') .
+  (isset($link_parts['query']) ? '?' . $link_parts['query'] : '');
       }
       $pages[$url .  '/' . $relative_link] = $relative_link;
     }
