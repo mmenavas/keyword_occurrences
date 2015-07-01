@@ -25,3 +25,8 @@ has been tested with Simple HTML DOM v 1.5.
 
 How to use:
 - Go to /keyword-occurrences, provide a URL and keywords, and run the analysis.
+
+Troubleshooting:
+- Make sure simple_html_dom.php is in correct directory. Refer to Installation section in this document.
+- Make sure simple_html_dom.php has read permission for owner, group and everybody (444).
+- Clear drupal caches after modifying simple_html_dom.php's file permissions.
