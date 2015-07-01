@@ -189,7 +189,7 @@ function keyword_occurrences_crawl($url, $scope) {
 /**
  * Get list of pages from $url
  *
- * TODO: Turn this into a recursive function to collect every unique relative
+ * @TODO: Turn this into a recursive function to collect every unique relative
  * path found in all pages.
  *
  */
@@ -227,7 +227,7 @@ function keyword_occurrences_get_pages($url) {
   $pages[$url] = (isset($url_parts['path']) ? $url_parts['path'] : '/');
   
   // Add relative paths.
-  // TODO: Handle/support for in-page anchors (fragments) is missing.
+  // @TODO: Handle/support for in-page anchors (fragments) is missing.
   foreach ($html->find('a') as $link) {
 
     // Parse URL
@@ -250,7 +250,7 @@ function keyword_occurrences_get_pages($url) {
       if (($link_parts['path'] == '' || $link_parts['path'] == '/') &&
       $pages[$url] != '/' ) {
 
-  $relative_link = '/';
+        $relative_link = '/';
 
       }
       else {
@@ -284,7 +284,7 @@ function keyword_occurrences_get_pages($url) {
  * Filters
  */
 function keyword_occurrences_filters_form($form, &$form_state,
-$url = '', $keywords = '', $scope = 0) {
+         $url = '', $keywords = '', $scope = 0) {
 
   // Declare form
   $form = array();
@@ -317,7 +317,7 @@ $url = '', $keywords = '', $scope = 0) {
 }
 
 /**
- * Vaidate handler
+ * Validate handler
  */
 function keyword_occurrences_filters_form_validate($form, &$form_state) {
   // Show error message
